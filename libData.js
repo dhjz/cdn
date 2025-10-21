@@ -19,10 +19,12 @@ const mirrors = [
     color: '#1e1e1f',
     sources: [
       { name: 'vvvv.ee', url: 'https://proxy.vvvv.ee/' },
+      { name: 'jsdmirror', url: 'https://cdn.jsdmirror.com/#converter' },
       { name: 'gh-proxy', url: 'https://gh-proxy.com' },
       { name: 'free-cn', url: 'https://free.cn.eu.org/' },
       { name: '739999', url: 'https://hubproxy.739999.xyz/' },
       { name: '1888866', url: 'https://ghproxy.1888866.xyz/' },
+      { name: 'mogg.cc', url: 'https://docker.mogg.cc/' },
     ]
   },
   {
