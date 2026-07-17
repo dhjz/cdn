@@ -27,6 +27,7 @@ window.cdnData = {
     { name: 'moment.js', version: '2.30.1', file: 'moment.min.js' },
     { name: 'FileSaver.js', version: '2.0.5', file: 'FileSaver.min.js' },
     { name: 'jszip', version: '3.10.1', file: 'jszip.min.js' },
+    { name: 'crypto-js', version: '4.2.0', file: 'crypto-js.min.js' },
     { name: 'mousetrap', version: '1.6.5', file: 'mousetrap.min.js' },
     { name: 'jquery', version: '3.7.1', file: 'jquery.min.js' },
     { name: 'prism', version: '1.30.0', file: 'prism.min.js' },
