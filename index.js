@@ -104,6 +104,9 @@ window.vueApp = Vue.createApp({
       this.dialogShow = true
       // window.open(this.getCdnUrl(lib.name, lib.version, lib.file, null, dist), '_blank')
     },
+    openUrlB(lib) {
+      window.open(this.getCdnUrl(lib.name, lib.version, lib.file, null, null), '_blank')
+    },
     openNewUrl(url) {
       window.open(url).focus()
     },

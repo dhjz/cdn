@@ -39,6 +39,8 @@ window.cdnData = {
     { name: 'font-awesome', version: '6.7.2', file: 'css/all.min.css' },
     { name: 'echarts', version: '5.4.3', file: 'echarts.min.js' },
     { name: 'Chart.js', version: '4.4.1', file: 'chart.min.js' },
-    { name: 'd3', version: '7.8.5', file: 'd3.min.js' }
+    { name: 'd3', version: '7.8.5', file: 'd3.min.js' },
+    { name: 'hls.js', version: '1.6.10', file: 'hls.min.js' },
+    { name: 'artplayer', version: '5.4.0', file: 'artplayer.min.js' },
   ]
 }
