@@ -44,21 +44,41 @@ window.vueApp = Vue.createApp({
       document.body.classList.toggle('dark', this.isDarkMode)
       localStorage.setItem('cdn-theme', this.isDarkMode ? 'dark' : 'light')
     },
+    findLib(name, version, file) {
+      const libs = this.appData.libs
+      return libs.find(l => l.name === name && l.version === version && l.file === file)
+        || libs.find(l => l.name === name && l.file === file)
+        || libs.find(l => l.name === name)
+    },
+    getFix(name, version, file, cdnObj) {
+      const cdn = cdnObj || this.appData.cdn[this.selectedCdn]
+      if (!cdn || cdn.name !== '南科大镜像') return {}
+      const map = (cdnData.fix && cdnData.fix.sustech) || {}
+      const lib = this.findLib(name, version, file)
+      const fix = (lib && map[lib.zname || lib.name]) || map[name]
+      if (!fix) return {}
+      return typeof fix === 'string' ? { version: fix } : fix
+    },
     updateCdnUrls() {
       this.appData.libs.forEach((lib) => {
+        const fix = this.getFix(lib.name, lib.version, lib.file)
+        lib.displayVersion = fix.version || lib.version
         lib.cdnUrl = this.getCdnUrl(lib.name, lib.version, lib.file)
       })
     },
     getCdnUrl(name, version, file, cdnObj, filePrefix) {
       cdnObj = cdnObj ? cdnObj : this.appData.cdn[this.selectedCdn]
-      return cdnObj.url.replace('#name', name).replace('#version', version).replace('#file', (filePrefix || '') + file)
+      const fix = this.getFix(name, version, file, cdnObj)
+      const fixedVersion = fix.version || version
+      const fixedFile = fix.file || file
+      return cdnObj.url.replace('#name', name).replace('#version', fixedVersion).replace('#file', (filePrefix || '') + fixedFile)
     },
     async testCdnLatency(cdnIndex) {
       const cdn = this.appData.cdn[cdnIndex]
       cdn.loading = true
       // const testUrl = this.getCdnUrl('nanoid', '5.1.5', 'index.browser.min.js', cdn)
       // const testUrl = this.getCdnUrl('vue', '3.5.17', 'vue.global.js', cdn)
-      const testUrl = this.getCdnUrl('dayjs', '1.11.13', 'dayjs.min.js', cdn)
+      const testUrl = this.getCdnUrl('dayjs', '1.11.23', 'dayjs.min.js', cdn)
       const startTime = performance.now()
       try {
         const response = await fetch(testUrl, { method: 'HEAD' })

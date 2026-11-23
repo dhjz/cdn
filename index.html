@@ -37,11 +37,12 @@
         <h2>常用 JS 库 <input type="text" v-model="searchText" placeholder="输入关键字搜索..." /></h2>
         <div class="table-container">
           <table class="libs-table">
-            <thead><tr><th>库名</th><th>版本</th><th>CDN 地址</th><th>操作</th></tr></thead>
+            <thead><tr><th>库名</th><th>版本</th><th>大小</th><th>CDN 地址</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="(lib, index) in filterLibs" :key="index">
                 <td>{{ lib.zname || lib.name }}</td>
-                <td>{{ lib.version }}</td>
+                <td :title="lib.displayVersion && lib.displayVersion !== lib.version ? '原版本 ' + lib.version : ''">{{ lib.displayVersion || lib.version }}</td>
+                <td :title="lib.displayVersion && lib.displayVersion !== lib.version ? '原版本 ' + lib.version + ' 的大小' : ''">{{ lib.size }}</td>
                 <td class="cdn-url"><code>{{ lib.cdnUrl}}</code></td>
                 <td class="actions">
                   <button class="btn btn-copy" @click="copyUrl(lib.cdnUrl)">复制</button>
