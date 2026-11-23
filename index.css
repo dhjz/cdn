@@ -52,7 +52,7 @@ button+button { margin-left: 6px; }
 }
 
 .container {
-    max-width: 1500px;
+    max-width: 1400px;
     width: 96%;
     margin: 0 auto;
     padding: 10px;
@@ -83,7 +83,7 @@ button+button { margin-left: 6px; }
 section {
     background-color: var(--bg-primary);
     border-radius: 8px;
-    padding: 20px;
+    padding: 20px 10px;
     margin-bottom: 25px;
     box-shadow: var(--shadow);
 }
@@ -166,7 +166,7 @@ h2 {
 .cdn-url code {
     display: block;
     font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 14px;
+    font-size: 13px;
     word-break: break-all;
     color: var(--text-secondary);
 }
@@ -272,7 +272,7 @@ h2 {
     }
     
     section {
-        padding: 15px;
+        padding: 15px 8px;
     }
     
     .cdn-options {
