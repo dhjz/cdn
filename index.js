@@ -5,7 +5,7 @@ window.vueApp = Vue.createApp({
       isNewWin: localStorage.getItem('cdn-isNewWin') === 'true',
       isDarkMode: false,
       searchText: '',
-      selectedCdn: 0,
+      selectedCdn: Math.max(0, cdnData.cdn.findIndex(x => x.name === '南科大镜像')),
       selectedTemplate: '',
       htmlTemplate: '',
       showToast: false,
@@ -145,12 +145,12 @@ window.vueApp = Vue.createApp({
         let res = await fetch(url, { method: 'HEAD' });
         if (res.ok) {
           const len = res.headers.get('Content-Length');
-          if (len) size += (parseInt(len, 10) / 1024).toFixed(2) + ' KB(gzip)，';
+          if (len) size += Math.round(parseInt(len, 10) / 1024) + 'KB(gzip)，';
         }
         res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP Error! Status: ${res.status}`);
         const blob = await res.blob();
-        size += (blob.size / 1024).toFixed(2) + ' KB';
+        size += Math.round(blob.size / 1024) + 'KB';
       } catch (e) {
         console.error('获取文件大小失败:', e);
         return size || null;
