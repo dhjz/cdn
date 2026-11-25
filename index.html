@@ -14,7 +14,7 @@
     <header class="header">
       <h1>CDN 工具箱 <a href="./lib.html">访问Mirrors镜像库</a></h1>
       <div class="theme-toggle">
-        <span @click="isNewWin = !isNewWin" :class="{ opacity: !isNewWin }" title="是否新窗口打开">🎛️</span> 
+        <span @click="isNewWin = !isNewWin" :class="{ opacity: !isNewWin, 'newopen': true }" title="是否新窗口打开">新窗口</span> 
         <span @click="toggleTheme"> {{ isDarkMode ? '🌙' : '☀️' }}</span>
       </div>
     </header>
@@ -34,13 +34,20 @@
 
       <!-- JS 库列表 -->
       <section class="libs-section">
-        <h2>常用 JS 库 <input type="text" v-model="searchText" placeholder="输入关键字搜索..." /></h2>
+        <h2>
+          <span>常用 JS 库</span>
+          <div class="libs-controls">
+            <input type="text" class="custom-lib-input" v-model="customLibKeyword" @keyup.enter="searchFromHeader" :placeholder="customLib ? '编辑自定义库：' + customLib.name + '（回车搜索）' : '搜索库'" />
+            <input type="text" v-model="searchText" placeholder="输入关键字搜索..." />
+            <button class="btn btn-open" @click="clearSearchInputs" :disabled="!customLibKeyword && !searchText">清空</button>
+          </div>
+        </h2>
         <div class="table-container">
           <table class="libs-table">
             <thead><tr><th>库名</th><th>版本</th><th>大小</th><th>CDN 地址</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="(lib, index) in filterLibs" :key="index">
-                <td>{{ lib.zname || lib.name }}</td>
+                <td :class="{ 'custom-name-clickable': lib.isCustom }" :title="lib.isCustom ? '点击编辑自定义库' : null" @click="lib.isCustom && editCustomLib()">{{ lib.zname || lib.name }}</td>
                 <td :title="lib.displayVersion && lib.displayVersion !== lib.version ? '原版本 ' + lib.version : ''">{{ lib.displayVersion || lib.version }}</td>
                 <td :title="lib.displayVersion && lib.displayVersion !== lib.version ? '原版本 ' + lib.version + ' 的大小' : ''">{{ lib.size }}</td>
                 <td class="cdn-url"><code>{{ lib.cdnUrl}}</code></td>
@@ -96,6 +103,54 @@
           <button class="btn" @click="openNewUrl(iframeSrc)">新打开</button>
         </h3>
         <iframe v-if="dialogShow" :src="iframeSrc" class="dialog-iframe" frameborder="0"></iframe>
+      </div>
+    </div>
+
+    <!-- 自定义库搜索弹窗 -->
+    <div class="dialog lib-dialog" v-show="searchDialogShow">
+      <div class="dialog-cont lib-dialog-cont">
+        <div class="lib-dialog-head">
+          <h3>自定义库</h3>
+          <button class="btn" @click="closeSearchDialog">关闭</button>
+        </div>
+        <div class="search-bar">
+          <span>搜索关键字：<strong>{{ searchKeyword }}</strong></span>
+          <span class="search-hint">同时搜索 cdnjs 与 npmmirror，各取前 10 条；结果仅缓存到本次浏览器会话</span>
+        </div>
+        <div class="search-form">
+          <label>name <input v-model="searchForm.name" placeholder="包名" /></label>
+          <label>version <input v-model="searchForm.version" placeholder="版本" /></label>
+          <label>filename <input v-model="searchForm.file" placeholder="文件路径，如 dist/vue.global.js" /></label>
+          <button class="btn btn-copy-template" @click="saveCustomLibFromForm">设为自定义库</button>
+          <button v-if="customLib" class="btn" @click="removeCustomLib">移除</button>
+          <span v-if="searchMetaLoading" class="search-hint">正在推荐文件...</span>
+        </div>
+        <div class="search-results">
+          <div class="search-panel">
+            <div class="search-panel-title">cdnjs <span>{{ searchStatus.cdnjs }}</span></div>
+            <div v-if="searchResults.cdnjs.length" class="search-list">
+              <div v-for="(item, i) in searchResults.cdnjs" :key="'cdnjs-' + i"
+                   class="search-item" :class="{ active: isSelected(item) }" @click="selectResult(item)">
+                <div class="search-item-main"><strong>{{ item.name }}</strong><span>@{{ item.version }}</span></div>
+                <div class="search-item-desc" :title="item.description">{{ item.description || '暂无描述' }}</div>
+                <div class="search-item-file">文件：<code>{{ item.file || '-' }}</code> · <a :href="detailUrl(item)" target="_blank" rel="noopener" @click.stop>详情</a></div>
+              </div>
+            </div>
+            <div v-else class="search-empty">{{ searchLoading ? '搜索中...' : (searchStatus.cdnjs || '暂无结果') }}</div>
+          </div>
+          <div class="search-panel">
+            <div class="search-panel-title">npmmirror <span>{{ searchStatus.npmmirror }}</span></div>
+            <div v-if="searchResults.npmmirror.length" class="search-list">
+              <div v-for="(item, i) in searchResults.npmmirror" :key="'npmmirror-' + i"
+                   class="search-item" :class="{ active: isSelected(item) }" @click="selectResult(item)">
+                <div class="search-item-main"><strong>{{ item.name }}</strong><span>@{{ item.version }}</span></div>
+                <div class="search-item-desc" :title="item.description">{{ item.description || '暂无描述' }}</div>
+                <div class="search-item-file"><span v-if="item.downloads">下载：{{ formatCount(item.downloads) }} · </span><a :href="detailUrl(item)" target="_blank" rel="noopener" @click.stop>npmmirror详情</a> · <a :href="npmUrl(item)" target="_blank" rel="noopener" @click.stop>npm详情</a> · <a :href="npmxUrl(item)" target="_blank" rel="noopener" @click.stop>npmx详情</a></div>
+              </div>
+            </div>
+            <div v-else class="search-empty">{{ searchLoading ? '搜索中...' : (searchStatus.npmmirror || '暂无结果') }}</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

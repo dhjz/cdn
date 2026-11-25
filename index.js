@@ -1,3 +1,22 @@
+const loadSavedCustomLib = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('cdn-customLib') || 'null')
+    if (saved && saved.name && saved.version && saved.file) {
+      return {
+        name: saved.name,
+        version: saved.version,
+        file: saved.file,
+        zname: saved.name,
+        isCustom: true,
+        size: saved.size || ''
+      }
+    }
+  } catch (e) {
+    return null
+  }
+  return null
+}
+
 window.vueApp = Vue.createApp({
   data() {
     return {
@@ -5,6 +24,17 @@ window.vueApp = Vue.createApp({
       isNewWin: localStorage.getItem('cdn-isNewWin') === 'true',
       isDarkMode: false,
       searchText: '',
+      customLib: loadSavedCustomLib(),
+      searchDialogShow: false,
+      searchKeyword: '',
+      customLibKeyword: '',
+      searchForm: { name: '', version: '', file: '' },
+      searchResults: { cdnjs: [], npmmirror: [] },
+      searchStatus: { cdnjs: '', npmmirror: '' },
+      searchLoading: false,
+      searchMetaLoading: false,
+      searchMetaSeq: 0,
+      selectedResultKey: '',
       selectedCdn: Math.max(0, cdnData.cdn.findIndex(x => x.name === '南科大镜像')),
       selectedTemplate: '',
       htmlTemplate: '',
@@ -19,6 +49,7 @@ window.vueApp = Vue.createApp({
     }
   },
   mounted() {
+    this.customLibKeyword = this.customLib ? this.customLib.name : ''
     this.updateCdnUrls()
     this.initTheme()
     this.testAllCdnLatency()
@@ -28,7 +59,12 @@ window.vueApp = Vue.createApp({
   },
   computed: {
     filterLibs() {
-      return this.appData.libs.filter(lib => lib.name.toLowerCase().includes(this.searchText.toLowerCase()))
+      const libs = this.customLib ? [this.customLib, ...this.appData.libs] : this.appData.libs
+      return libs
+        .filter(lib => (lib.name + (lib.zname || '')).toLowerCase().includes(this.searchText.toLowerCase()))
+        .map(lib => lib.isCustom
+          ? { ...lib, cdnUrl: this.getCdnUrl(lib.name, lib.version, lib.file, null, null, true) }
+          : lib)
     }
   },
   methods: {
@@ -66,9 +102,10 @@ window.vueApp = Vue.createApp({
         lib.cdnUrl = this.getCdnUrl(lib.name, lib.version, lib.file)
       })
     },
-    getCdnUrl(name, version, file, cdnObj, filePrefix) {
+    getCdnUrl(name, version, file, cdnObj, filePrefix, skipFix) {
       cdnObj = cdnObj ? cdnObj : this.appData.cdn[this.selectedCdn]
-      const fix = this.getFix(name, version, file, cdnObj)
+      if (!cdnObj) return ''
+      const fix = skipFix ? {} : this.getFix(name, version, file, cdnObj)
       const fixedVersion = fix.version || version
       const fixedFile = fix.file || file
       return cdnObj.url.replace('#name', name).replace('#version', fixedVersion).replace('#file', (filePrefix || '') + fixedFile)
@@ -119,16 +156,224 @@ window.vueApp = Vue.createApp({
       this.showToastMessage(`已复制${isTag ? '标签+链接' : '链接'}到剪贴板`)
     },
     openUrl(lib, dist) {
-      if (this.isNewWin) return window.open(this.getCdnUrl(lib.name, lib.version, lib.file, null, dist))
-      this.iframeSrc = this.getCdnUrl(lib.name, lib.version, lib.file, null, dist)
+      const url = this.getCdnUrl(lib.name, lib.version, lib.file, null, dist, lib.isCustom)
+      if (this.isNewWin) return window.open(url)
+      this.iframeSrc = url
       this.dialogShow = true
-      // window.open(this.getCdnUrl(lib.name, lib.version, lib.file, null, dist), '_blank')
     },
     openUrlB(lib) {
-      window.open(this.getCdnUrl(lib.name, lib.version, lib.file, null, null), '_blank')
+      window.open(this.getCdnUrl(lib.name, lib.version, lib.file, null, null, lib.isCustom), '_blank')
     },
     openNewUrl(url) {
       window.open(url).focus()
+    },
+    closeSearchDialog() {
+      this.searchDialogShow = false
+    },
+    clearSearchInputs() {
+      this.customLibKeyword = ''
+      this.searchText = ''
+    },
+    searchFromHeader() {
+      const keyword = this.customLibKeyword.trim()
+      if (!keyword && this.customLib) return this.openCustomSearch(this.customLib.name)
+      if (!keyword) return this.showToastMessage('请输入 JS 库名后回车搜索')
+      this.openCustomSearch(keyword)
+    },
+    openCustomSearch(keyword) {
+      this.searchKeyword = keyword
+      this.customLibKeyword = keyword
+      this.searchForm = this.customLib && this.customLib.name === keyword
+        ? { name: this.customLib.name, version: this.customLib.version, file: this.customLib.file }
+        : { name: keyword, version: '', file: '' }
+      this.searchResults = { cdnjs: [], npmmirror: [] }
+      this.searchStatus = { cdnjs: '', npmmirror: '' }
+      this.selectedResultKey = ''
+      this.searchDialogShow = true
+      this.searchLibs()
+    },
+    editCustomLib() {
+      if (!this.customLib) return this.showToastMessage('请先在上方输入库名回车搜索')
+      this.openCustomSearch(this.customLib.name)
+    },
+    searchCacheKey(source, keyword) {
+      return 'cdn-lib-search:' + source + ':' + keyword.trim().toLowerCase()
+    },
+    readSearchCache(key) {
+      try {
+        const raw = sessionStorage.getItem(key)
+        if (!raw) return null
+        const parsed = JSON.parse(raw)
+        return Array.isArray(parsed) ? parsed : null
+      } catch (e) {
+        return null
+      }
+    },
+    writeSearchCache(key, items) {
+      try {
+        sessionStorage.setItem(key, JSON.stringify(items))
+        return true
+      } catch (e) {
+        return false
+      }
+    },
+    fileFromCdnjsLatest(url) {
+      if (!url) return ''
+      const parts = url.split('/')
+      return decodeURIComponent(parts[parts.length - 1] || '')
+    },
+    async searchLibs() {
+      const keyword = this.searchKeyword.trim()
+      if (!keyword) return this.showToastMessage('请输入 JS 库名')
+      this.searchLoading = true
+      this.searchResults = { cdnjs: [], npmmirror: [] }
+      this.searchStatus = { cdnjs: '搜索中...', npmmirror: '搜索中...' }
+      const [cdnjs, npmmirror] = await Promise.all([
+        this.searchCdnjs(keyword),
+        this.searchNpmmirror(keyword)
+      ])
+      this.searchResults = { cdnjs, npmmirror }
+      this.searchLoading = false
+    },
+    async searchCdnjs(keyword) {
+      const key = this.searchCacheKey('cdnjs', keyword)
+      const cached = this.readSearchCache(key)
+      if (cached) {
+        this.searchStatus.cdnjs = '会话缓存 · ' + cached.length + ' 条'
+        return cached
+      }
+      try {
+        const url = 'https://api.cdnjs.com/libraries?search=' + encodeURIComponent(keyword)
+          + '&limit=10&fields=name,version,latest,description'
+        const res = await fetch(url)
+        if (!res.ok) throw new Error('HTTP ' + res.status)
+        const data = await res.json()
+        const items = (data.results || []).slice(0, 10).map(item => ({
+          source: 'cdnjs',
+          name: item.name,
+          version: item.version,
+          description: item.description || '',
+          file: this.fileFromCdnjsLatest(item.latest)
+        }))
+        this.writeSearchCache(key, items)
+        this.searchStatus.cdnjs = items.length + ' 条'
+        return items
+      } catch (e) {
+        this.searchStatus.cdnjs = '搜索失败：' + e.message
+        return []
+      }
+    },
+    async searchNpmmirror(keyword) {
+      const key = this.searchCacheKey('npmmirror', keyword)
+      const cached = this.readSearchCache(key)
+      if (cached) {
+        this.searchStatus.npmmirror = '会话缓存 · ' + cached.length + ' 条'
+        return cached
+      }
+      try {
+        const url = 'https://registry.npmmirror.com/-/v1/search?text=' + encodeURIComponent(keyword) + '&size=10'
+        const res = await fetch(url)
+        if (!res.ok) throw new Error('HTTP ' + res.status)
+        const data = await res.json()
+        const items = (data.objects || []).slice(0, 10).map(obj => {
+          const pkg = obj.package || {}
+          return {
+            source: 'npmmirror',
+            name: pkg.name,
+            version: pkg.version,
+            description: pkg.description || '',
+            downloads: (obj.downloads && (obj.downloads.all || obj.downloads.weekly)) || 0
+          }
+        }).filter(item => item.name && item.version)
+        this.writeSearchCache(key, items)
+        this.searchStatus.npmmirror = items.length + ' 条'
+        return items
+      } catch (e) {
+        this.searchStatus.npmmirror = '搜索失败：' + e.message
+        return []
+      }
+    },
+    isSelected(item) {
+      return this.selectedResultKey === item.source + ':' + item.name + '@' + item.version
+    },
+    selectResult(item) {
+      this.selectedResultKey = item.source + ':' + item.name + '@' + item.version
+      this.searchForm = {
+        name: item.name,
+        version: item.version,
+        file: item.file || ''
+      }
+      if (item.source === 'npmmirror') this.suggestNpmFile(item)
+    },
+    async suggestNpmFile(item) {
+      const key = item.source + ':' + item.name + '@' + item.version
+      const seq = ++this.searchMetaSeq
+      const current = this.selectedResultKey === key
+      this.searchMetaLoading = true
+      try {
+        const url = 'https://registry.npmmirror.com/' + encodeURIComponent(item.name)
+        const res = await fetch(url)
+        if (!res.ok) throw new Error('HTTP ' + res.status)
+        const pkg = await res.json()
+        const meta = (pkg.versions && pkg.versions[item.version]) || {}
+        const pick = value => {
+          if (!value) return ''
+          if (typeof value === 'string') return value
+          if (typeof value === 'object') return value.default || value.import || value.require || ''
+          return ''
+        }
+        const file = (pick(meta.unpkg) || pick(meta.jsdelivr) || pick(meta.browser)
+          || pick(meta.main) || pick(meta.module) || '')
+          .replace(/^\.\//, '')
+          .replace(/^\//, '')
+        if (current && seq === this.searchMetaSeq) {
+          if (!this.searchForm.file) this.searchForm.file = file
+          if (!file) this.showToastMessage('未找到推荐文件，请手动填写 filename')
+        }
+      } catch (e) {
+        if (current && seq === this.searchMetaSeq) this.showToastMessage('获取文件信息失败，请手动填写 filename')
+      } finally {
+        if (seq === this.searchMetaSeq) this.searchMetaLoading = false
+      }
+    },
+    saveCustomLibFromForm() {
+      const name = this.searchForm.name.trim()
+      const version = this.searchForm.version.trim()
+      const file = this.searchForm.file.trim().replace(/^\.\//, '').replace(/^\//, '')
+      if (!name || !version || !file) return this.showToastMessage('请填写 name / version / filename')
+      const existed = !!this.customLib
+      this.customLib = { name, version, file, zname: name, isCustom: true, size: '' }
+      this.customLibKeyword = name
+      localStorage.setItem('cdn-customLib', JSON.stringify({ name, version, file }))
+      this.closeSearchDialog()
+      this.showToastMessage(existed ? '已更新自定义库' : '已添加自定义库')
+    },
+    removeCustomLib() {
+      this.customLib = null
+      this.customLibKeyword = ''
+      localStorage.removeItem('cdn-customLib')
+      this.closeSearchDialog()
+      this.showToastMessage('已移除自定义库')
+    },
+    detailUrl(item) {
+      if (item.source === 'cdnjs') {
+        const base = 'https://cdnjs.com/libraries/' + encodeURIComponent(item.name)
+        return item.version ? base + '/' + encodeURIComponent(item.version) : base
+      }
+      if (item.source === 'npmmirror') {
+        return 'https://npmmirror.com/package/' + encodeURIComponent(item.name)
+      }
+      return '#'
+    },
+    npmUrl(item) {
+      return 'https://www.npmjs.com/package/' + item.name
+    },
+    npmxUrl(item) {
+      return 'https://npmx.dev/package/' + item.name
+    },
+    formatCount(num) {
+      if (!num) return '-'
+      return num >= 10000 ? (num / 10000).toFixed(1) + '万' : String(num)
     },
     async getFileSize(lib, url) {
       const name = (lib.zname || lib.name) + '-' + lib.version
