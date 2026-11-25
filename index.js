@@ -197,7 +197,7 @@ window.vueApp = Vue.createApp({
       this.openCustomSearch(this.customLib.name)
     },
     searchCacheKey(source, keyword) {
-      return 'cdn-lib-search:' + source + ':' + keyword.trim().toLowerCase()
+      return 'cdn-lib-search20:' + source + ':' + keyword.trim().toLowerCase()
     },
     readSearchCache(key) {
       try {
@@ -244,11 +244,11 @@ window.vueApp = Vue.createApp({
       }
       try {
         const url = 'https://api.cdnjs.com/libraries?search=' + encodeURIComponent(keyword)
-          + '&limit=10&fields=name,version,latest,description'
+          + '&limit=20&fields=name,version,latest,description'
         const res = await fetch(url)
         if (!res.ok) throw new Error('HTTP ' + res.status)
         const data = await res.json()
-        const items = (data.results || []).slice(0, 10).map(item => ({
+        const items = (data.results || []).slice(0, 20).map(item => ({
           source: 'cdnjs',
           name: item.name,
           version: item.version,
@@ -271,11 +271,11 @@ window.vueApp = Vue.createApp({
         return cached
       }
       try {
-        const url = 'https://registry.npmmirror.com/-/v1/search?text=' + encodeURIComponent(keyword) + '&size=10'
+        const url = 'https://registry.npmmirror.com/-/v1/search?text=' + encodeURIComponent(keyword) + '&size=20'
         const res = await fetch(url)
         if (!res.ok) throw new Error('HTTP ' + res.status)
         const data = await res.json()
-        const items = (data.objects || []).slice(0, 10).map(obj => {
+        const items = (data.objects || []).slice(0, 20).map(obj => {
           const pkg = obj.package || {}
           return {
             source: 'npmmirror',

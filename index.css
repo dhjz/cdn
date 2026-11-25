@@ -22,25 +22,25 @@ h2 { font-size: 20px; margin-bottom: 13px; color: var(--text-primary); display: 
 .libs-controls { display: flex; align-items: center; gap: 8px; }
 .btn-custom { background-color: var(--primary-color); color: #fff; }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.lib-dialog-cont { width: min(1100px, 94vw); min-width: 0; min-height: auto; max-height: 90vh; overflow: auto; padding: 14px; background: var(--bg-primary); color: var(--text-primary); text-align: left; }
+.lib-dialog-cont { width: min(1300px, 94vw); min-width: 0; min-height: auto; max-height: 90vh; overflow: auto; padding: 14px; background: var(--bg-primary); color: var(--text-primary); text-align: left; }
 .lib-dialog h3 { text-align: left; margin: 0; }
 .lib-dialog-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .search-bar, .search-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .custom-lib-input { width: 220px; }
 .search-bar strong { color: var(--primary-color); }
-.search-hint { font-size: 12px; color: var(--text-secondary); }
+.search-hint { font-size: 13px; color: var(--text-secondary); }
 .search-form label { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text-secondary); }
 .search-form input { width: 180px; height: 30px; line-height: 30px; }
 .search-results { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .search-panel { background: var(--bg-secondary); border-radius: 6px; padding: 8px; min-height: 180px; min-width: 0; overflow: hidden; }
 .search-panel-title { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 6px; }
-.search-panel-title span { font-size: 12px; font-weight: 400; color: var(--text-secondary); }
+.search-panel-title span { font-size: 13px; font-weight: 400; color: var(--text-secondary); }
 .search-list { max-height: 70vh; overflow: auto; min-width: 0; }
 .search-item { padding: 7px 8px; border-radius: 5px; border: 1px solid transparent; cursor: pointer; min-width: 0; overflow: hidden; }
 .search-item:hover, .search-item.active { background: var(--bg-tertiary); border-color: var(--primary-color); }
 .search-item-main { display: flex; align-items: baseline; gap: 6px; }
 .search-item-main span { font-size: 13px; color: var(--text-secondary); }
-.search-item-desc, .search-item-file { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-item-desc, .search-item-file { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .search-item-file code { word-break: break-all; }
 .search-item-file a { color: var(--primary-color); text-decoration: none; }
 .search-item-file a:hover { text-decoration: underline; }
